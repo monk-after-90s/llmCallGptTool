@@ -1,3 +1,4 @@
+import asyncio
 import os
 from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse
@@ -5,7 +6,7 @@ import httpx
 from loguru import logger
 from urllib.parse import urlparse
 from fastapi.middleware.cors import CORSMiddleware
-from utilities.openai_tool import completions_stream
+from utilities.openai_tool import completions_stream, completions_stream1
 
 app = FastAPI()
 app.add_middleware(
@@ -16,7 +17,8 @@ app.add_middleware(
     allow_headers=["*"],  # 允许所有HTTP头
 )
 
-TARGET_URL = os.environ['OPENAI_BASE_URL']
+parsed_url = urlparse(os.environ['OPENAI_BASE_URL'])
+TARGET_URL = f"{parsed_url.scheme}://{parsed_url.netloc}"
 
 # 全局唯一的 httpx.AsyncClient 实例
 client: None | httpx.AsyncClient = None
@@ -58,6 +60,7 @@ async def proxy_middleware(request: Request, call_next):
             completions_stream(data=data),
             media_type="text/event-stream")
         resp.headers["Access-Control-Allow-Origin"] = "*"
+
         return resp
     else:
         # 获取请求体
