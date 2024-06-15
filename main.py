@@ -1,22 +1,12 @@
-import os
 from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse
 import httpx
 from loguru import logger
 from urllib.parse import urlparse
-from fastapi.middleware.cors import CORSMiddleware
-from utilities.openai_tool import completions_stream
 
 app = FastAPI()
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # 允许所有来源
-    allow_credentials=True,
-    allow_methods=["*"],  # 允许所有HTTP方法
-    allow_headers=["*"],  # 允许所有HTTP头
-)
 
-TARGET_URL = os.environ['OPENAI_BASE_URL']
+TARGET_URL = "https://qwen2-72b-instruct-gptq-int4.excn.top"
 
 # 全局唯一的 httpx.AsyncClient 实例
 client: None | httpx.AsyncClient = None
@@ -38,9 +28,10 @@ async def shutdown_event():
 
 @app.middleware("http")
 async def proxy_middleware(request: Request, call_next):
+    logger.debug(f"request: {request.url}")
     # 构建目标URL
     url = f"{TARGET_URL}{request.url.path}"
-    logger.debug(f"target url: {url}")
+
     # 获取请求方法
     method = request.method
 
@@ -50,29 +41,20 @@ async def proxy_middleware(request: Request, call_next):
     host = parsed_url.netloc
     headers["host"] = headers["x-forwarded-host"] = host
 
-    if '/v1/chat/completions' == request.url.path and method == "POST":
-        data = await request.json()
-        logger.debug(f"{data=}")
+    # 获取请求体
+    body = await request.body()
 
-        resp = StreamingResponse(
-            completions_stream(data=data),
-            media_type="text/event-stream")
-        resp.headers["Access-Control-Allow-Origin"] = "*"
-        return resp
-    else:
-        # 获取请求体
-        body = await request.body()
-        # 发送请求到目标服务
-        response = await client.request(
-            method=method,
-            url=url,
-            headers=headers,
-            content=body,
-            params=request.query_params
-        )
+    # 发送请求到目标服务
+    response = await client.request(
+        method=method,
+        url=url,
+        headers=headers,
+        content=body,
+        params=request.query_params
+    )
 
-        # 构建响应
-        return StreamingResponse(response.aiter_bytes(), status_code=response.status_code, headers=response.headers)
+    # 构建响应
+    return StreamingResponse(response.aiter_bytes(), status_code=response.status_code, headers=response.headers)
 
 
 if __name__ == "__main__":
