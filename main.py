@@ -1,11 +1,11 @@
 import os
 from fastapi import FastAPI, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, Response
 import httpx
 from loguru import logger
 from urllib.parse import urlparse
 from fastapi.middleware.cors import CORSMiddleware
-from utilities.openai_tool import completions_stream
+from utilities.openai_tool import openai_stream
 
 app = FastAPI()
 app.add_middleware(
@@ -51,12 +51,12 @@ async def proxy_middleware(request: Request, call_next):
     host = parsed_url.netloc
     headers["host"] = headers["x-forwarded-host"] = host
 
-    if '/v1/chat/completions' == request.url.path and method == "POST":
+    if method == "POST" and (await request.json()).get("stream"):
         data = await request.json()
         logger.debug(f"{data=}")
 
         resp = StreamingResponse(
-            completions_stream(data=data),
+            openai_stream(data=data, path=request.url.path),
             media_type="text/event-stream")
         resp.headers["Access-Control-Allow-Origin"] = "*"
 
@@ -74,7 +74,7 @@ async def proxy_middleware(request: Request, call_next):
         )
 
         # 构建响应
-        return StreamingResponse(response.aiter_bytes(), status_code=response.status_code, headers=response.headers)
+        return Response(await response.aread(), status_code=response.status_code, headers=response.headers)
 
 
 if __name__ == "__main__":
