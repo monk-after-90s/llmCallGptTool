@@ -1,0 +1,2 @@
+# qwen2_patch_server
+qwen2使用vllm部署之后缺少一些功能比如tool calling
