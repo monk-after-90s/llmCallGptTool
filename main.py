@@ -1,7 +1,8 @@
 from fastapi import FastAPI, Request, logger
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import StreamingResponse
 import httpx
 from loguru import logger
+from urllib.parse import urlparse
 
 app = FastAPI()
 
@@ -20,7 +21,9 @@ async def proxy_middleware(request: Request, call_next):
 
         # 获取请求头
         headers = dict(request.headers)
-        headers["host"] = headers["x-forwarded-host"] = TARGET_URL.split("//")[1]
+        parsed_url = urlparse(url)
+        host = parsed_url.netloc
+        headers["host"] = headers["x-forwarded-host"] = host
         # 获取请求体
         body = await request.body()
 
