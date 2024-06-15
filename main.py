@@ -1,4 +1,3 @@
-import asyncio
 import os
 from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse
@@ -6,7 +5,7 @@ import httpx
 from loguru import logger
 from urllib.parse import urlparse
 from fastapi.middleware.cors import CORSMiddleware
-from utilities.openai_tool import completions_stream, completions_stream1
+from utilities.openai_tool import completions_stream
 
 app = FastAPI()
 app.add_middleware(
