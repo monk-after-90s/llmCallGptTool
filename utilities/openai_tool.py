@@ -16,7 +16,16 @@ TIMEOUT = 30
 client: None | AsyncOpenAI = None
 
 
-async def openai_stream(data: Dict, method: str = "POST", path: str = "", channel: str = "openai") \
+async def openai_stream(data: Dict, method: str = "POST", path: str = "", channel: str = "openai"):
+    """根据是否流式选择"""
+    if not data.get("stream"):
+        async for chat_completion in _openai_stream(data, method, path, channel):
+            return chat_completion.to_dict()
+    else:
+        return _openai_stream(data, method, path, channel)
+
+
+async def _openai_stream(data: Dict, method: str = "POST", path: str = "", channel: str = "openai") \
         -> AsyncGenerator[str, None]:
     global client
 
@@ -46,10 +55,12 @@ async def openai_stream(data: Dict, method: str = "POST", path: str = "", channe
                         if c_cache:
                             yield c_cache
     elif channel == "openai" and path == "/v1/chat/completions":
-        if not data.get("stream"):
-            raise NotImplementedError
-
         client = client or AsyncOpenAI()
+
+        if not data.get("stream"):
+            yield await client.chat.completions.create(**data)
+            return
+
         stream = await client.chat.completions.create(**data)
         async for chunk in stream:
             chunk_s = "data: " + chunk.to_json(indent=0).replace("\n", "") + "\n\n"

@@ -1,3 +1,4 @@
+import json
 import os
 from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse, Response
@@ -72,11 +73,13 @@ async def proxy_middleware(request: Request, call_next):
                 functions=data.get("tools", []),
                 stream=data.get('stream', False))
         else:
-            stream_gen = openai_stream(data=data, path=request.url.path, channel="openai")
+            stream_gen = await openai_stream(data=data, path=request.url.path, channel="openai")
 
-        resp = StreamingResponse(
-            stream_gen,
-            media_type="text/event-stream")
+        if data.get("stream", False):
+            resp = StreamingResponse(stream_gen, media_type="text/event-stream")
+        else:
+            resp = Response(json.dumps(stream_gen), status_code=200, headers={"content-Type": "application/json"})
+
         resp.headers["Access-Control-Allow-Origin"] = "*"
 
         return resp
