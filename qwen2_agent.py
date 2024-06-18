@@ -68,7 +68,8 @@ def qwen2_call_tool(llm: BaseChatModel, messages: List[Dict], functions: List[Di
     function_choices = llm.chat(messages=messages,
                                 functions=functions,
                                 stream=stream)
-    return function_choices
+    if not stream:
+        return function_choices
 
 
 def test():
