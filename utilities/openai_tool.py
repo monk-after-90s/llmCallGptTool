@@ -2,6 +2,7 @@ import os
 from typing import AsyncGenerator, Dict
 from urllib.parse import urljoin
 import httpx
+import ujson
 from loguru import logger
 from urllib.parse import urlparse
 from openai import AsyncOpenAI
@@ -63,7 +64,7 @@ async def _openai_stream(data: Dict, method: str = "POST", path: str = "", chann
 
         stream = await client.chat.completions.create(**data)
         async for chunk in stream:
-            chunk_s = "data: " + chunk.to_json(indent=0).replace("\n", "") + "\n\n"
+            chunk_s = "data: " + ujson.dumps(chunk.to_dict(), ensure_ascii=False) + "\n\n"
             logger.debug(f"{chunk_s=}")
             yield chunk_s
     else:

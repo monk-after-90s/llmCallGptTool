@@ -1,5 +1,5 @@
-import json
 import os
+import ujson
 from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse, Response
 import httpx
@@ -78,7 +78,8 @@ async def proxy_middleware(request: Request, call_next):
         if data.get("stream", False):
             resp = StreamingResponse(stream_gen, media_type="text/event-stream")
         else:
-            resp = Response(json.dumps(stream_gen), status_code=200, headers={"content-Type": "application/json"})
+            resp = Response(ujson.dumps(stream_gen, ensure_ascii=False), status_code=200,
+                            headers={"content-Type": "application/json"})
 
         resp.headers["Access-Control-Allow-Origin"] = "*"
 
