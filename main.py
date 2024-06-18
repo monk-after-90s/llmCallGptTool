@@ -64,11 +64,12 @@ async def proxy_middleware(request: Request, call_next):
         # 工具调用特殊处理
         if "tool_choice" in data or 'tools' in data:
             stream_gen = qwen2_call_tool(
-                llm=qwen2_agent.get_chat_model({
+                {
                     'model': data["model"],
                     'model_server': urljoin(TARGET_URL, "/v1"),  # api_base
                     'api_key': os.environ.get("OPENAI_API_KEY") or 'sk-',
-                }),
+                }
+                ,
                 messages=data.get("messages", []),
                 functions=data.get("tools", []),
                 stream=data.get('stream', False))
