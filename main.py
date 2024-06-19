@@ -6,9 +6,7 @@ import httpx
 from loguru import logger
 from urllib.parse import urlparse
 from fastapi.middleware.cors import CORSMiddleware
-from qwen2_agent import qwen2_call_tool
 from utilities.openai_tool import openai_stream
-from urllib.parse import urljoin
 
 app = FastAPI()
 app.add_middleware(
