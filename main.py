@@ -6,7 +6,6 @@ import httpx
 from loguru import logger
 from urllib.parse import urlparse
 from fastapi.middleware.cors import CORSMiddleware
-import qwen2_agent
 from qwen2_agent import qwen2_call_tool
 from utilities.openai_tool import openai_stream
 from urllib.parse import urljoin
@@ -59,22 +58,7 @@ async def proxy_middleware(request: Request, call_next):
         data = await request.json()
         logger.debug(f"{data=}")
 
-        # 流式响应迭代器
-        stream_gen = None
-        # 工具调用特殊处理
-        if "tool_choice" in data or 'tools' in data:
-            stream_gen = qwen2_call_tool(
-                {
-                    'model': data["model"],
-                    'model_server': urljoin(TARGET_URL, "/v1"),  # api_base
-                    'api_key': os.environ.get("OPENAI_API_KEY") or 'sk-',
-                }
-                ,
-                messages=data.get("messages", []),
-                functions=data.get("tools", []),
-                stream=data.get('stream', False))
-        else:
-            stream_gen = await openai_stream(data=data, path=request.url.path, channel="openai")
+        stream_gen = await openai_stream(data=data, path=request.url.path, channel="openai")
 
         if data.get("stream", False):
             resp = StreamingResponse(stream_gen, media_type="text/event-stream")
