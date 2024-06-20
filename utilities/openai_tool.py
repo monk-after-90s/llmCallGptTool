@@ -44,21 +44,10 @@ async def openai_stream(data: Dict, method: str = "POST", path: str = "", channe
                 tool_call_competion["choices"][0]["message"]["content"] = \
                     tool_call_competion["choices"][0]["message"]["content"][:funnc_start_inx] + \
                     tool_call_competion["choices"][0]["message"]["content"][funnc_end_inx + 12:]
-                tool_call_competion["choices"][0]["message"]["content"].strip()
-                if not tool_call_competion["choices"][0]["message"]["content"]:
-                    tool_call_competion["choices"].pop(0)
+                tool_call_competion["choices"][0]["message"]["content"] = \
+                    tool_call_competion["choices"][0]["message"]["content"].strip() or None
                 ## 工具调用转OpenAI格式
-                openai_tool_call_info = {
-                    'finish_reason': 'tool_calls',
-                    'index': len(tool_call_competion["choices"]),
-                    'logprobs':
-                        None if not tool_call_competion["choices"] else
-                        tool_call_competion["choices"][0].get("logprobs"),
-                    'message': {'content': None,
-                                'role': 'assistant',
-                                'tool_calls': [
-
-                                ]}}
+                openai_tool_call_info = []
 
                 func_name = ''
                 args = ""
@@ -69,7 +58,7 @@ async def openai_stream(data: Dict, method: str = "POST", path: str = "", channe
                         args = func_call_msg[11:-12]
                     # 装载函数调用
                     if func_name and args:
-                        openai_tool_call_info['message']['tool_calls'].append(
+                        openai_tool_call_info.append(
                             {
                                 'id': f"call_{''.join(secrets.choice(string.ascii_letters) for _ in range(24))}",
                                 'function': {
@@ -79,7 +68,9 @@ async def openai_stream(data: Dict, method: str = "POST", path: str = "", channe
                         )
                         func_name = ""
                         args = ""
-                tool_call_competion["choices"].append(openai_tool_call_info)
+                tool_call_competion["choices"][0]['message']['tool_calls'] = openai_tool_call_info
+                tool_call_competion["choices"][0]['finish_reason'] = 'tool_calls'
+
                 return tool_call_competion
     else:
         return _openai_stream(data, method, path, channel)
