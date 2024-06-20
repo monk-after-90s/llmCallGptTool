@@ -35,7 +35,7 @@ async def openai_stream(data: Dict, method: str = "POST", path: str = "", channe
                 ## 没有工具调用
                 return tool_call_competion
             else:
-                ## 提取工具调用的部分
+                ## 提取工具调用的部分 todo 适配多个choice
                 funnc_start_inx = tool_call_competion["choices"][0]["message"]["content"].find("✿✿\n<name>")
                 funnc_end_inx = tool_call_competion["choices"][0]["message"]["content"].rfind("</arguments>")
                 funcs_call_msg = tool_call_competion["choices"][0]["message"]["content"][
