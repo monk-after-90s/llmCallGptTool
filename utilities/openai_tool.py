@@ -77,11 +77,113 @@ async def openai_stream(data: Dict, method: str = "POST", path: str = "", channe
 
 
 async def _tool_calling_transfer_to_openai(raw_stream_generator: AsyncGenerator[str, None]):
+    # 标识是否工具调用阶段
+    tool_calling_period = False
+    # 工具调用缓存
+    tool_calling_cache = ""
+    # 工具调用序号
+    tool_call_inx = 0
+    # 工具调用头位置
+    mark_inx = None
     async for raw_stream in raw_stream_generator:
-        if '✿' not in raw_stream['choices'][0]['delta'].get('content', ''):
+        # 键校正
+        if 'content' not in raw_stream['choices'][0]['delta'].keys():
+            raw_stream['choices'][0]['delta']['content'] = None
+
+        if not tool_calling_period and (
+                not raw_stream['choices'][0]['delta']['content'] or '✿' not in raw_stream['choices'][0]['delta'].get(
+            'content', '')):  # 普通回复内容
             chunk_s = "data: " + ujson.dumps(raw_stream, ensure_ascii=False) + "\n\n"
             logger.debug(f"{chunk_s=}")
             yield chunk_s
+        elif not tool_calling_period and '✿' in raw_stream['choices'][0]['delta'].get('content', ''):
+            tool_calling_period = True
+            # 缓存转换工具调用信息
+            mark_pos = raw_stream['choices'][0]['delta']['content'].find("✿")
+            # 缓存起来
+            tool_calling_cache = raw_stream['choices'][0]['delta']['content'][mark_pos:]
+            # ✿前面的推出去
+            raw_stream['choices'][0]['delta']['content'] = \
+                raw_stream['choices'][0]['delta']['content'][:mark_pos] or ""
+            if raw_stream['choices'][0]['delta']['content']:
+                chunk_s = "data: " + ujson.dumps(raw_stream, ensure_ascii=False) + "\n\n"
+                logger.debug(f"{chunk_s=}")
+                yield chunk_s
+
+        # 工具调用期
+        elif tool_calling_period:
+            # 逐个字符累积
+            for c in raw_stream['choices'][0]['delta']['content']:
+                tool_calling_cache += c
+
+                if mark_inx is None:
+                    # 去头
+                    mark_inx = tool_calling_cache.find("✿✿\n")
+                    if mark_inx >= 0:
+                        tool_calling_cache = tool_calling_cache[mark_inx + 3:]
+                    else:
+                        mark_inx = None
+                elif "<name>" in tool_calling_cache and tool_calling_cache.endswith("</name>"):  # 完整函数名
+                    name_trunk_he = tool_calling_cache.find("<name>")
+                    name_trunk_ta = tool_calling_cache.find("</name>")
+                    assert -1 < name_trunk_he < name_trunk_ta
+                    # 函数名
+                    func_name = tool_calling_cache[name_trunk_he + 6:name_trunk_ta]
+                    # 推出去
+                    chunk_d = {'id': raw_stream['id'],
+                               'choices': [{'delta': {'tool_calls': [{'index': tool_call_inx,
+                                                                      'id': f"call_{''.join(secrets.choice(string.ascii_letters) for _ in range(24))}",
+                                                                      'function': {'arguments': '',
+                                                                                   'name': func_name},
+                                                                      'type': 'function'}]},
+                                            'finish_reason': None,
+                                            'index': 0,
+                                            'logprobs': None}],
+                               'created': raw_stream['created'],
+                               'model': raw_stream['model'],
+                               'object': raw_stream['object']}
+
+                    chunk_s = "data: " + ujson.dumps(chunk_d, ensure_ascii=False) + "\n\n"
+                    logger.debug(f"{chunk_s=}")
+                    yield chunk_s
+                    # 更新
+                    tool_call_inx += 1
+                    tool_calling_cache = tool_calling_cache[name_trunk_ta + 7:]
+                elif "<arguments>" in tool_calling_cache and tool_calling_cache.endswith("</arguments>"):  # 完整参数
+                    arguments_trunk_he, arguments_trunk_ta = (
+                        tool_calling_cache.find("<arguments>"), tool_calling_cache.find("</arguments>"))
+                    assert -1 < arguments_trunk_he < arguments_trunk_ta
+                    # 参数
+                    args = tool_calling_cache[arguments_trunk_he + 11:arguments_trunk_ta]
+                    # 推出去
+                    chunk_d = {'id': raw_stream['id'],
+                               'choices': [{'delta': {'tool_calls': [{'index': tool_call_inx - 1,
+                                                                      'function': {'arguments': args}}]},
+                                            'finish_reason': None,
+                                            'index': 0,
+                                            'logprobs': None}],
+                               'created': raw_stream['created'],
+                               'model': raw_stream['model'],
+                               'object': raw_stream['object']
+                               }
+                    chunk_s = "data: " + ujson.dumps(chunk_d, ensure_ascii=False) + "\n\n"
+                    logger.debug(f"{chunk_s=}")
+                    yield chunk_s
+                    # 更新
+                    tool_calling_cache = tool_calling_cache[arguments_trunk_ta + 12:]
+    # 结束
+    chunk_d = {'id': raw_stream['id'],
+               'choices': [{'delta': {},
+                            'finish_reason': 'tool_calls',
+                            'index': 0,
+                            'logprobs': None}],
+               'created': raw_stream['created'],
+               'model': raw_stream['model'],
+               'object': raw_stream['object']
+               }
+    chunk_s = "data: " + ujson.dumps(chunk_d, ensure_ascii=False) + "\n\n"
+    logger.debug(f"{chunk_s=}")
+    yield chunk_s
 
 
 async def _openai_stream(data: Dict,
