@@ -21,7 +21,7 @@ client: None | AsyncOpenAI = None
 
 
 async def openai_stream(data: Dict, method: str = "POST", path: str = "", channel: str = "openai") \
-        -> AsyncGenerator[Dict, None] | Dict:
+        -> AsyncGenerator[str, None] | Dict:
     """
     根据是否流式选择处理路线
 
