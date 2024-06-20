@@ -263,7 +263,7 @@ What's the weather like in San Francisco, Tokyo, and Paris?
 
 # response #
 如果你不调用外部工具，你的回答被禁止包含有关“✿外部工具✿”和“✿tool_choice✿”的任何内容！
-如果你调用外部工具，你只能回答调用外部工具即函数所需要的信息，你的全部回答以“✿✿\n”起始，以“<name>“和”</name>”包围函数名，以“<arguments>”和“</arguments>”包围传参字典的JSON字符串。例如为了回答用户提问：
+如果你调用外部工具，在你的回答中，调用外部工具即函数所需要的信息放在最后，这部分以“✿✿\n”起始，以“<name>“和”</name>”包围函数名，以“<arguments>”和“</arguments>”包围传参字典的JSON字符串。例如为了回答用户提问：
 ```text
 What's the weather like in San Francisco, Tokyo, and Paris?
 ✿外部工具✿：[
@@ -298,6 +298,17 @@ What's the weather like in San Francisco, Tokyo, and Paris?
 <name>get_current_weather</name>
 <arguments>{"location":"Paris", "unit":"celsius"}</arguments>
 ```，
+或者是类似这样的：
+```text
+稍等，我将为你查询天气信息...
+✿✿
+<name>get_current_weather</name>
+<arguments>{"location":"San Francisco", "unit":"celsius"}</arguments>
+<name>get_current_weather</name>
+<arguments>{"location":"Tokyo", "unit":"celsius"}</arguments>
+<name>get_current_weather</name>
+<arguments>{"location":"Paris", "unit":"celsius"}</arguments>
+```
 这样，你回答的调用外部工具即函数所需要的信息就包含三次调用函数get_current_weather，分别查询了San Francisco、Tokyo和Paris的天气。
     """,
                                 'role': 'system'})
