@@ -23,7 +23,7 @@ client: None | AsyncOpenAI = None
 async def openai_stream(data: Dict, method: str = "POST", path: str = "", channel: str = "openai") \
         -> AsyncGenerator[str, None] | Dict:
     """
-    根据是否流式选择处理路线
+    根据是否流式选择处理路线，以及对响应结果的转换
 
     :param data: 请求体
     """
@@ -73,11 +73,34 @@ async def openai_stream(data: Dict, method: str = "POST", path: str = "", channe
 
                 return tool_call_competion
     else:
-        return _openai_stream(data, method, path, channel)
+        return _tool_calling_transfer_to_openai(_openai_stream(data, method, path, channel, yield_type="dict"))
 
 
-async def _openai_stream(data: Dict, method: str = "POST", path: str = "", channel: str = "openai") \
-        -> AsyncGenerator[str, None]:
+async def _tool_calling_transfer_to_openai(raw_stream_generator: AsyncGenerator[str, None]):
+    async for raw_stream in raw_stream_generator:
+        if '✿' not in raw_stream['choices'][0]['delta'].get('content', ''):
+            chunk_s = "data: " + ujson.dumps(raw_stream, ensure_ascii=False) + "\n\n"
+            logger.debug(f"{chunk_s=}")
+            yield chunk_s
+
+
+async def _openai_stream(data: Dict,
+                         method: str = "POST",
+                         path: str = "",
+                         channel: str = "openai",
+                         yield_type: str = "str") -> AsyncGenerator[str, None]:
+    """
+    LLM定制与接口调用
+
+    :param data:
+    :param method:
+    :param path:
+    :param channel: 是使用httpx自己构建请求还是openai库。基本上不会使用httpx
+    :param yield_type: 流式请求时流数据的类型，默认为str，例如“'data: {"id":"cmpl-c93b280ab24846bcbc5f707ac391a5b6","choices":[{"delta":{"content":"\n"},"finish_reason":null,"index":0,"logprobs":null}],"created":1718868916,"model":"Qwen\/Qwen2-72B-Instruct-GPTQ-Int4","object":"chat.completion.chunk"}
+
+'”；或者dict，例如“{"id":"cmpl-c93b280ab24846bcbc5f707ac391a5b6","choices":[{"delta":{"content":"\n"},"finish_reason":null,"index":0,"logprobs":null}],"created":1718868916,"model":"Qwen\/Qwen2-72B-Instruct-GPTQ-Int4","object":"chat.completion.chunk"}”
+    :return:
+    """
     global client
     # 工具调用提示词
     data["messages"].insert(0, {'content': """
@@ -228,8 +251,14 @@ What's the weather like in San Francisco, Tokyo, and Paris?
 
         stream = await client.chat.completions.create(**data)
         async for chunk in stream:
-            chunk_s = "data: " + ujson.dumps(chunk.to_dict(), ensure_ascii=False) + "\n\n"
-            logger.debug(f"{chunk_s=}")
-            yield chunk_s
+            if yield_type == "str":
+                chunk_s = "data: " + ujson.dumps(chunk.to_dict(), ensure_ascii=False) + "\n\n"
+                logger.debug(f"{chunk_s=}")
+                yield chunk_s
+            elif yield_type == "dict":
+                yield chunk.to_dict()
+            else:
+                raise NotImplementedError
+
     else:
         raise NotImplementedError
