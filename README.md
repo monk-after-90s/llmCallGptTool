@@ -27,10 +27,10 @@ of the LLM. worker_num is the number of workers, port is the port of the server.
 The API served by this project is compatible with the OpenAI API.
 
 ## Citation
-
+```text
 @article{llmCallGptTool,
 title={llmCallGptTool: Enable any LLM to call tool in gpt format},
 author={monk-after-90s },
 journal={},
-year={2024}
-}
+year={2024}}
+```
