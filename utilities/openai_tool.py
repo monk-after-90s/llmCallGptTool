@@ -332,7 +332,7 @@ async def _openai_stream(data: Dict,
                 break
         if message:
             message['content'] = message['content'] + f"""
-    ✿外部工具✿：{ujson.dumps(tools)}
+    ✿外部工具✿：{ujson.dumps(tools, ensure_ascii=False)}
     ✿tool_choice✿：{tool_choice}
             """
     elif any(m['role'] == 'tool' for m in data['messages']):  # 工具调用结果汇总
@@ -363,7 +363,7 @@ async def _openai_stream(data: Dict,
 外部工具调用结果：{ujson.dumps(tool_res, ensure_ascii=False)}
             """,
         })
-    logger.debug(f"{pprint.pformat(data)}")
+    logger.debug(pprint.pformat(data))
     if channel == "httpx":
         async with httpx.AsyncClient() as client:
             async with client.stream(
