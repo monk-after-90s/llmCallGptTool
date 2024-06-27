@@ -208,8 +208,43 @@ async def _openai_stream(data: Dict,
 
     global client
 
-    # 问题中包含工具
-    if data.get('tools', []):
+    if data['messages'][-1].get('role') == 'tool' and 'name' in data['messages'][-1].keys():  # 工具调用结果汇总
+        # 清理'assistant'的tool_calls
+        for message in data['messages']:
+            if message['role'] == 'assistant':
+                if 'tool_calls' in message:
+                    message.pop('tool_calls')
+                if 'content' not in message:
+                    message['content'] = '我将调用外部工具回答这个问题...'
+        # 清理'tool_choice'
+        if 'tool_choice' in data:
+            data.pop('tool_choice')
+        # 清理'tools'
+        if 'tools' in data:
+            data.pop('tools')
+
+        # 工具调用结果范围
+        tool_res_idxs = []
+        meet_tool_res = False
+        for i in range(len(data['messages']) - 1, -1, -1):
+            if data['messages'][i]['role'] == 'tool':
+                meet_tool_res = True
+                tool_res_idxs.append(i)
+            if meet_tool_res and data['messages'][i]['role'] != 'tool':
+                break
+
+        # 工具调用结果转qwen2格式
+        tool_res = [data['messages'].pop(i) for i in tool_res_idxs]
+        # 应该没有role=tool了
+        if any(m['role'] == 'tool' for m in data['messages']):
+            raise NotImplementedError
+        data['messages'].append({
+            'role': 'assistant',
+            'content': f"""
+        外部工具调用结果：{ujson.dumps(tool_res, ensure_ascii=False)}
+                    """,
+        })
+    elif data.get('tools', []):  # 工具调用
         # 工具调用提示词
         data["messages"].insert(0, {'content': """
     # context #
@@ -335,34 +370,6 @@ async def _openai_stream(data: Dict,
     ✿外部工具✿：{ujson.dumps(tools, ensure_ascii=False)}
     ✿tool_choice✿：{tool_choice}
             """
-    elif any(m['role'] == 'tool' for m in data['messages']):  # 工具调用结果汇总
-        # 清理'assistant'的tool_calls
-        for message in data['messages']:
-            if message['role'] == 'assistant':
-                if 'tool_calls' in message:
-                    message.pop('tool_calls')
-
-        # 工具调用结果范围
-        tool_res_idxs = []
-        meet_tool_res = False
-        for i in range(len(data['messages']) - 1, -1, -1):
-            if data['messages'][i]['role'] == 'tool':
-                meet_tool_res = True
-                tool_res_idxs.append(i)
-            if meet_tool_res and data['messages'][i]['role'] != 'tool':
-                break
-
-        # 工具调用结果转qwen2格式
-        tool_res = [data['messages'].pop(i) for i in tool_res_idxs]
-        # 应该没有role=tool了
-        if any(m['role'] == 'tool' for m in data['messages']):
-            raise NotImplementedError
-        data['messages'].append({
-            'role': 'assistant',
-            'content': f"""
-外部工具调用结果：{ujson.dumps(tool_res, ensure_ascii=False)}
-            """,
-        })
     logger.debug(pprint.pformat(data))
     if channel == "httpx":
         async with httpx.AsyncClient() as client:
