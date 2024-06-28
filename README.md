@@ -1,5 +1,7 @@
 # llmCallGptTool: Enable any LLM to call tool in gpt format.
 
+![logo.png](logo.png)
+
 Make any LLM call gpt tool, which means the
 openai [function calling doc](https://platform.openai.com/docs/guides/function-calling)
 can be applied to any LLM through the api served by this project.
@@ -27,6 +29,7 @@ of the LLM. worker_num is the number of workers, port is the port of the server.
 The API served by this project is compatible with the OpenAI API.
 
 ## Citation
+
 ```citation
 @article{llmCallGptTool,
 title={llmCallGptTool: Enable any LLM to call tool in gpt format},
