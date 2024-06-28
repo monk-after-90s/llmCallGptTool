@@ -1,6 +1,6 @@
 # llmCallGptTool: Enable any LLM to call tool in gpt format.
 
-![logo.png](logo.png)
+![logo.jpeg](logo.jpeg)
 
 Make any LLM call gpt tool, which means the
 openai [function calling doc](https://platform.openai.com/docs/guides/function-calling)
