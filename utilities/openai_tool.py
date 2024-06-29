@@ -350,7 +350,7 @@ async def _openai_stream(data: Dict,
     <name>get_current_weather</name>
     <arguments>{"location":"Paris", "unit":"celsius"}</arguments>
     ```
-    这样，你回答的调用外部工具即函数所需要的信息就包含三次调用函数get_current_weather，分别查询了San Francisco、Tokyo和Paris的天气。
+    这样，你回答的调用外部工具即函数所需要的信息就包含三次调用函数get_current_weather，分别查询了San Francisco、Tokyo和Paris的天气。在你的每次回答中，最多只能包含五次函数调用。
         """,
                                     'role': 'system'})
         # openai格式的tool calling转qwen2格式
