@@ -304,7 +304,7 @@ async def _openai_stream(data: Dict,
     
     # response #
     如果你不调用外部工具，你的回答被禁止包含有关“✿外部工具✿”和“✿tool_choice✿”的任何内容！
-    如果你调用外部工具，在你的回答中，调用外部工具即函数所需要的信息放在最后，这部分以“✿✿\n”起始，以“<name>“和”</name>”包围函数名，以“<arguments>”和“</arguments>”包围传参字典的JSON字符串。例如为了回答用户提问：
+    如果你调用外部工具，你的回答只能包含调用外部工具即函数所需要的信息，以“✿✿\n”起始，以“<name>“和”</name>”包围函数名，以“<arguments>”和“</arguments>”包围传参字典的JSON字符串。例如为了回答用户提问：
     ```text
     What's the weather like in San Francisco, Tokyo, and Paris?
     ✿外部工具✿：[
