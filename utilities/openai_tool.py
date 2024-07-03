@@ -68,6 +68,9 @@ async def openai_stream(data: Dict, method: str = "POST", path: str = "", channe
                         )
                         func_name = ""
                         args = ""
+                        # 控制工具调用最多5个
+                        if len(openai_tool_call_info) >= 5:
+                            break
                 tool_call_competion["choices"][0]['message']['tool_calls'] = openai_tool_call_info
                 tool_call_competion["choices"][0]['finish_reason'] = 'tool_calls'
 
