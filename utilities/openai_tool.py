@@ -174,6 +174,14 @@ async def _tool_calling_transfer_to_openai(raw_stream_generator: AsyncGenerator[
                     yield chunk_s
                     # 更新
                     tool_calling_cache = tool_calling_cache[arguments_trunk_ta + 12:]
+
+                    # 控制最多5个工具调用
+                    if tool_call_inx >= 5:
+                        tool_call_inx = -1
+                        break
+        # 外层循环因工具调用的数量限制提前结束
+        if tool_call_inx == -1:
+            break
     # 结束
     chunk_d = {'id': raw_stream['id'],
                'choices': [{'delta': {},
