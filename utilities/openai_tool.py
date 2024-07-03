@@ -117,7 +117,7 @@ async def _tool_calling_transfer_to_openai(raw_stream_generator: AsyncGenerator[
         elif tool_calling_period:
             # 逐个字符累积
             for c in raw_stream['choices'][0]['delta']['content']:
-                tool_calling_cache += c
+                tool_calling_cache = ''.join([tool_calling_cache, c])  # todo 使用io.StringIO
 
                 if mark_inx is None:
                     # 去头
