@@ -250,9 +250,9 @@ async def _openai_stream(data: Dict,
         if any(m['role'] == 'tool' for m in data['messages']):
             raise NotImplementedError
         data['messages'].append({
-            'role': 'assistant',
+            'role': 'user',
             'content': f"""
-        外部工具调用结果：{ujson.dumps(tool_res, ensure_ascii=False)}
+        你使用外部工具调用的结果：{ujson.dumps(tool_res, ensure_ascii=False)}
                     """,
         })
     elif data.get('tools', []):  # 工具调用
